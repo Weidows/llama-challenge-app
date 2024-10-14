@@ -40,13 +40,9 @@ interface NewSessionResponse {
 }
 
 interface AskResponse {
-  content: string;
-  agent_name: string;
-  data: {
-    action: string;
-    message: string;
-    title: string;
-  };
+  title: string;
+  message: string;
+  action: "display" | "rest" | "alert";
 }
 
 export const fetchApiKey = async (): Promise<string> => {

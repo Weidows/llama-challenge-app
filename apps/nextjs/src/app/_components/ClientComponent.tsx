@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Modal } from "antd";
 
 import {
   askQuestion,
@@ -13,7 +14,7 @@ import {
   fetchSessionList,
   updateApiKey,
   updateCurrentSession,
-} from "./apiService";
+} from "../api/apiService";
 
 // 定义 session 数据的类型
 interface Message {
@@ -44,6 +45,7 @@ export default function ClientComponent() {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [modelList, setModelList] = useState<string[]>([]);
   const [agentList, setAgentList] = useState<string[]>([]);
+  const [dialogOpenID, setDialogOpenID] = useState("");
 
   useEffect(() => {
     const getApiKey = async () => {
@@ -179,11 +181,23 @@ export default function ClientComponent() {
     try {
       const response = await askQuestion(formData.content, formData.agent, {});
       console.log("Ask Response:", response);
-      // 更新 sessionData
       if (sessionData) {
+        // 更新 sessionData
         const data = await fetchSessionData();
         setSessionData(data);
+
+        switch (response.action) {
+          case "alert":
+            setDialogOpenID(data.message_list[-1]?.id ?? "");
+            break;
+          case "display":
+            break;
+          case "rest":
+          default:
+            break;
+        }
       }
+
       // Scroll chat box to the bottom
       const chatBox = document.getElementById("chat-box");
       if (chatBox) {
@@ -373,24 +387,36 @@ export default function ClientComponent() {
                   className="h-[500px] space-y-4 overflow-y-scroll p-10"
                 >
                   {sessionData.message_list.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.role === "user"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-xl rounded-lg p-3 ${
-                          message.role === "user"
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-300 text-black"
-                        }`}
-                      >
-                        {message.content}
-                      </div>
-                    </div>
+                    <>
+                      {message.role === "user" ? (
+                        <div
+                          key={message.id}
+                          className="flex max-w-xl justify-self-end rounded-lg bg-blue-500 p-3 text-white"
+                        >
+                          {message.content}
+                        </div>
+                      ) : (
+                        <>
+                          <Button
+                            key={message.id}
+                            type="primary"
+                            className="flex max-w-xl justify-self-start rounded-lg bg-gray-300 p-3 text-black"
+                            onClick={() => setDialogOpenID(message.id)}
+                          >
+                            {message.content.substring(0, 50) + " ..."}
+                          </Button>
+                          <Modal
+                            title="Message"
+                            centered
+                            open={dialogOpenID == message.id}
+                            onOk={() => setDialogOpenID("")}
+                            onCancel={() => setDialogOpenID("")}
+                          >
+                            {message.content}
+                          </Modal>
+                        </>
+                      )}
+                    </>
                   ))}
                 </div>
               </div>
