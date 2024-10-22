@@ -68,15 +68,14 @@ export default function ClientComponent() {
         .then((resp) => {
           // 向 askRespDataList 添加元素
           setAskRespDataList((prevData) => {
-            setDialogOpenID((prevData.length + 2 - 1).toString());
+            setDialogOpenID(prevData.length.toString());
 
             return [
               ...prevData,
-              resp,
               {
                 action: "alert",
-                message: new Date().toLocaleTimeString() + " - test message",
-                title: new Date().toLocaleTimeString(),
+                message: resp.message,
+                title: new Date().toLocaleTimeString() + " - " + resp.title,
               } as AskResponse,
             ];
           });
