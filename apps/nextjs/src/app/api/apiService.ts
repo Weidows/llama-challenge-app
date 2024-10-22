@@ -39,7 +39,7 @@ interface NewSessionResponse {
   session_id: string;
 }
 
-interface AskResponse {
+export interface AskResponse {
   title: string;
   message: string;
   action: "display" | "rest" | "alert";

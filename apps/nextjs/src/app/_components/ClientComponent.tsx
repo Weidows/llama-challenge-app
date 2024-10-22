@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Modal } from "antd";
 
+import type { AskResponse } from "../api/apiService";
 import {
   askQuestion,
   createNewSession,
@@ -43,6 +44,7 @@ export default function ClientComponent() {
   const [sessions, setSessions] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
+  const [askRespDataList, setAskRespDataList] = useState<AskResponse[]>([]);
   const [modelList, setModelList] = useState<string[]>([]);
   const [agentList, setAgentList] = useState<string[]>([]);
   const [dialogOpenID, setDialogOpenID] = useState("");
@@ -60,6 +62,30 @@ export default function ClientComponent() {
       }
     };
     getApiKey();
+
+    setInterval(() => {
+      askQuestion("", formData.agent, {})
+        .then((resp) => {
+          // 向 askRespDataList 添加元素
+          setAskRespDataList((prevData) => {
+            setDialogOpenID((prevData.length + 2 - 1).toString());
+
+            return [
+              ...prevData,
+              resp,
+              {
+                action: "alert",
+                message: new Date().toLocaleTimeString() + " - test message",
+                title: new Date().toLocaleTimeString(),
+              } as AskResponse,
+            ];
+          });
+
+          // Update setDialogOpenID to use the latest length of askRespDataList
+          setDialogOpenID((prevDataLength) => (prevDataLength + 1).toString());
+        })
+        .catch((error) => console.log(error));
+    }, 5000);
   }, []);
 
   useEffect(() => {
@@ -74,7 +100,10 @@ export default function ClientComponent() {
         console.error("Error fetching session list:", error);
       }
     };
-    getSessionList();
+    getSessionList().catch((error) => {
+      // log
+      console.error("Error fetching session list:", error);
+    });
   }, []);
 
   useEffect(() => {
@@ -212,24 +241,16 @@ export default function ClientComponent() {
     <div className="flex h-screen w-full">
       <nav className="h-full w-1/4 border-2 border-green-700 p-4">
         <ul className="space-y-2">
-          <li>
-            <a
-              className="block p-2 hover:bg-gray-500"
-              onClick={() => {
-                setActiveSection("config");
-              }}
-            >
-              Config
-            </a>
-          </li>
-          <li>
-            <a
-              className="block p-2 hover:bg-gray-500"
-              onClick={() => setActiveSection("session")}
-            >
-              Session
-            </a>
-          </li>
+          {["session", "config", "alert"].map((page) => (
+            <li key={page}>
+              <a
+                className={`block p-2 ${activeSection === page ? "bg-gray-800" : ""} hover:bg-gray-500`}
+                onClick={() => setActiveSection(page)}
+              >
+                {page.charAt(0).toUpperCase() + page.slice(1)}
+              </a>
+            </li>
+          ))}
         </ul>
       </nav>
       <div className="max-h-screen w-3/4 p-4">
@@ -421,6 +442,45 @@ export default function ClientComponent() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {activeSection === "alert" && (
+          <section id="alert" className="mt-8">
+            <h2 className="text-xl font-bold">Loading (by every 5s)</h2>
+
+            <div className="mt-4">
+              <div
+                id="chat-box"
+                className="h-[500px] space-y-4 overflow-y-scroll p-10"
+              >
+                {askRespDataList.map((askResp, index) => (
+                  <>
+                    {askResp.action !== "rest" && (
+                      <>
+                        <Button
+                          key={index}
+                          type="primary"
+                          className="flex max-w-xl justify-self-start rounded-lg bg-gray-300 p-3 text-black"
+                          onClick={() => setDialogOpenID(index.toString())}
+                        >
+                          {askResp.title}
+                        </Button>
+                        <Modal
+                          title="Message"
+                          centered
+                          open={dialogOpenID == index.toString()}
+                          onOk={() => setDialogOpenID("")}
+                          onCancel={() => setDialogOpenID("")}
+                        >
+                          {askResp.message}
+                        </Modal>
+                      </>
+                    )}
+                  </>
+                ))}
+              </div>
+            </div>
           </section>
         )}
       </div>
